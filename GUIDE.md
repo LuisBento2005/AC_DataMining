@@ -23,7 +23,7 @@ This guide covers what we have to do in the project, how to do it, and which lin
 
 ## What the project is
 
-We have about 100 years of hockey history (1909–2009) in 22 CSV tables, in [`Data/`](Data/). We have to build ML models that, **the day before a new season starts**, predict:
+We have about 100 years of hockey history (1909–2009) in 22 CSV tables, in [`data/`](data/). We have to build ML models that, **the day before a new season starts**, predict:
 
 - **(a)** the final regular-season ranking of the teams;
 - **(b)** which teams will change coaches;
@@ -63,7 +63,8 @@ We deliver one presentation of at most 40 slides. It is both the 15-minute talk 
    - **`docs/`** for meeting notes and the decision log.
 4. **Repo structure:**
    ```
-   Data/                original CSVs (never modified)
+   data/                original CSVs (never modified)
+   data/hockey.db       SQLite database built from the CSVs (generated, not in git)
    data/processed/      generated datasets
    sql/                 SQL scripts (DB creation, queries)
    notebooks/           01_eda, 02_quality, 03_prep, 04_task_a, 05_task_b
@@ -103,14 +104,26 @@ Write the answers in `docs/meetings.md`, with the date.
 
 ### 2.1 Put the data in a database
 
-Load every CSV into **DuckDB** (simplest: one file, SQL straight on pandas) or SQLite/PostgreSQL:
+We use **SQLite**. It ships with Python, works with pandas (`pd.read_sql`), supports window functions (`LAG() OVER (...)`), and KNIME has a dedicated SQLite Connector node, so the same database serves Python and KNIME. DuckDB would also work for Python, but KNIME has no dedicated connector for it.
+
+Set up the environment and build the database (from the repo root):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python src/load_db.py        # creates data/hockey.db, one table per CSV
+```
+
+`data/hockey.db` is generated, so it is in `.gitignore`. Anyone can rebuild it with the script.
+
+Query it from a notebook:
 
 ```python
-import duckdb, glob, os
-con = duckdb.connect("hockey.duckdb")
-for f in glob.glob("Data/*.csv"):
-    name = os.path.basename(f)[:-4]
-    con.execute(f"CREATE OR REPLACE TABLE {name} AS SELECT * FROM read_csv_auto('{f}')")
+import sqlite3, pandas as pd
+con = sqlite3.connect("../data/hockey.db")
+q = lambda sql: pd.read_sql(sql, con)
+q("SELECT name FROM sqlite_master WHERE type='table'")
 ```
 
 Do as much exploration and preparation as possible **in SQL**: joins, aggregations per team and season, duplicate checks, consistency checks, lag features with window functions. Save the queries in `sql/`.
@@ -472,7 +485,7 @@ How to read it: each row is one line of the grading grid.
 | **PM tools** | "detailed task sharing with appropriate tool" | GitHub Projects: each task has an owner, a deadline and a linked commit/PR. | Annex: board screenshot. |
 | **Collaboration tools** | "easy collaboration (communication, data, workflows, documentation)" | Discord + GitHub + shared `src/` + `docs/` + README. | Annex: tools → role. |
 | **Analytics tools** | "**multiple** tools from the courses" | Python + KNIME/Orange. | Annex: workflow screenshot + result comparison. |
-| **Database** | "**extensive** use for exploration and preparation" | DuckDB/SQLite: joins, aggregations, quality checks, lag features via `LAG() OVER (PARTITION BY franchID ORDER BY year)`. | `sql/` + annex with 2–3 example queries. |
+| **Database** | "**extensive** use for exploration and preparation" | SQLite (`data/hockey.db`): joins, aggregations, quality checks, lag features via `LAG() OVER (PARTITION BY franchID ORDER BY year)`. | `sql/` + annex with 2–3 example queries. |
 | **Other tools** | "extensive and correct use" | matplotlib/seaborn/plotly; ydata-profiling or OpenRefine for quality; Git. | Profiling report in an annex; plots throughout. |
 
 ## 9. Presentation
