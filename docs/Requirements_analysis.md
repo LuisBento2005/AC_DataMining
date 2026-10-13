@@ -20,7 +20,7 @@
 Using the provided historical data, predict for the target season:
 
 - a) The final regular season ranking of the teams
-- b) The set of teams that will change choaches. Following the teacher's clarification, a choaching change is considered at the end of the season, i.e whether the team starts the following season with a different coach
+- b) The set of teams that will change choaches. Following the teacher's clarification, a choaching change is considered during the season, i.e whether the team changes coach during the current season
 - c) A third requirement still to be announced. The solution should be flexible and modular enough to accommodate it with little rework
 
 ### End Users and Objectives
