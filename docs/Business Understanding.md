@@ -1,16 +1,18 @@
-# Requirements of analysis
+# Business Understanding
 
-## Hockey
+## Requirement of Analysis
 
-### Domain
+### Hockey
 
-#### Ice Hockey Game
+#### Domain
+
+##### Ice Hockey Game
 - Game in a Ice rink between two teams
 - Each Team has Six Player on the ice at a time, including the goaltender
 - A game lasts one hour of gampeplay
 - The team that scores the mosst goals wins; ties are resolved in overtime or shootout
 
-#### Hockey Season
+##### Hockey Season
 
 - Teams compete in a regular season divided into Eastern and Western conferences, each of which is further split into divisions. Teams accumulate points to reach the best possible standing
 - At the end of the regular season, a fixed number of top performing teams qualify for the postseason playoffs where they compete in elimination series to win the championship throphy
@@ -30,7 +32,7 @@ Using the provided historical data, predict for the target season:
 | a) Final Ranking | Scouts, bettors, analysts, media| Scouting and roster planning, betting decisions, forecasting which teams reach the playoffs|
 | b) Coach Change | Team Management, media, contract and staffing planning| Management decisions, contract planning, anticipating the coaching market, media coverage|
 
-##### What each user needs from the output
+### What each user needs from the output
 
 - a) A complete ranking of all teams. Users benefit from knowing which teams are likely to land near the playoff cut-off
 - b) A list of teams predicted to change coach. A probability or risk score per team.
@@ -46,3 +48,20 @@ Using the provided historical data, predict for the target season:
 - a) The predicted ranking should be close to the real final standings, and especially reliable at separating playoff teams from non-playoff teams.
 - b) The model should identify most of the teams that change coach without producing too many false alarms
 
+## Business Goals
+
+|Business Goals|
+| ------------ |
+| I want to know before the season starts, how teams will finish? |
+| Will the team make the playoffs? |
+| I want to know what teams will change coach? |
+
+
+
+## Translation of business goals into data mining goals
+
+| Business Goals | Data Mining Goals| Type |
+| -------------- | ---------------- | ---- |
+| I want to know before the season starts, how teams will finish? | Predict each team's points percentage Pts / (2·G) for season t, then sort the teams (within division and league) | Regression then ranking |
+| Will the team make the playoffs? | Predict playoff yes/no | Binary Classification |
+| I want to know what teams will change coach? | Predict whether the team has a coach change in season | Binary Classification |
