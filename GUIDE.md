@@ -27,7 +27,7 @@ We have about 100 years of hockey history (1909–2009) in 22 CSV tables, in [`d
 
 - **(a)** the final regular-season ranking of the teams;
 - **(b)** which teams will change coaches;
-- **(c)** a third task, still to be announced.
+- **(c)** how many penalty minutes (PIM) each player will accumulate during the regular season.
 
 We deliver one presentation of at most 40 slides. It is both the 15-minute talk and the report, with the extra detail in annexes. We also submit the code and data needed to reproduce the results.
 
