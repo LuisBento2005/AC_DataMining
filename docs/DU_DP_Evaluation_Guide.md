@@ -1,68 +1,81 @@
 # Guia de Defesa e Mapeamento da Grelha de Avaliação (Data Understanding & Data Preparation)
 
-Este documento mapeia diretamente **cada um dos 9 critérios da grelha de avaliação de Data Understanding (DU)** (e a sua ligação direta ao **Data Preparation (DP)**) para os métodos estatísticos, gráficos a 300 dpi (`docs/figures/du/`) e descobertas de domínio implementados nos notebooks:
-- `notebooks/01_eda.ipynb` (Exploratory Data Analysis & Data Quality Audit)
-- `notebooks/02_statistical_analysis.ipynb` (Multivariate Statistical Analysis, Unsupervised Archetypes & Hypothesis Testing)
-- `notebooks/03_data_preparation.ipynb` (End-to-End Anti-Leakage Data Preparation & Walk-Forward Verification)
+Este documento liga cada critério de DU e DP da grelha de avaliação aos métodos, figuras e resultados que estão nos notebooks:
+- [`notebooks/01_eda.ipynb`](../notebooks/01_eda.ipynb): exploração, eras da NHL, leakage, primeira análise das 3 tasks
+- [`notebooks/02_statistical_analysis.ipynb`](../notebooks/02_statistical_analysis.ipynb): análise multivariada e multi-tabela, aprofundamento das 3 tasks
+- [`notebooks/03_data_preparation.ipynb`](../notebooks/03_data_preparation.ipynb): integração, qualidade, missing values, outliers, redundância e transformações (tasks a e b)
+
+Todas as figuras estão em [`docs/figures/du/`](figures/du/). **Todos os números deste guia foram copiados dos outputs dos notebooks.** Se um notebook for alterado e re-executado, este guia tem de ser revisto.
 
 ---
 
-## 1. Mapeamento Direto aos 9 Critérios da Grelha de Data Understanding
+## 1. Critérios de Data Understanding
 
-| Critério da Grelha | Avaliação Intermédia Anterior | Como Evoluímos para o Nível Máximo (*Integrated 3+D / Beyond Expectations*) | Onde Está Provado (Notebooks & Figuras) |
-|---|---|---|---|
-| **1. DU: diversity of statistical methods** | *Intermédio* (testes simples 1D/2D isolados) | Aplicámos **10 famílias distintas e complementares de métodos estatísticos**:<br>1. Testes não-paramétricos de $k$ amostras (**Kruskal-Wallis $H$**) e 2 amostras (**Mann-Whitney $U$**)<br>2. Teste de homogeneidade de variâncias (**Levene $W$**)<br>3. Correlações de ordem (**Spearman $\rho$**) + Diagnóstico de multicolinearidade (**VIF**)<br>4. Redução de dimensionalidade multivariada (**PCA 4D intra-época**)<br>5. Clustering não-supervisionado (**K-Means vs. Gaussian Mixture Models - GMM**, validado com Silhouette, Davies-Bouldin, BIC e Adjusted Rand Index)<br>6. Tabelas de contingência multi-dimensionais (**$\chi^2$ de Pearson, $V$ de Cramér e Resíduos Estandardizados**)<br>7. Regressão linear múltipla com erros robustos à heterocedasticidade (**OLS HC3** e **Teste $F$ parcial**)<br>8. Regressão logística multivariada (**Logit MLE com Odds Ratios e ICs a 95%**)<br>9. Análise de sobrevivência não-paramétrica (**Estimador de Kaplan-Meier**)<br>10. Deteção de anomalias multivariadas (**Isolation Forest**) | `01_eda.ipynb` (Secções 3–6)<br>`02_statistical_analysis.ipynb` (Secções 1–5)<br>`03_data_preparation.ipynb` (Secções 5–8) |
-| **2. DU: complexity of statistical methods** | *Simple 1D and 2D methods* | Passámos de correlações bivariadas para **métodos 3+D integrados entre 8 tabelas SQL**:<br>• **PCA em 15 variáveis de 5 tabelas** (`Teams`, `Goalies`, `Scoring`, `TeamSplits`, `TeamsPost`), retendo **4 componentes principais (64.2% da variância)**.<br>• **Clustering 4D (K-Means vs GMM)** sobre o espaço latente do PCA cruzado com os dois alvos ($t+1$).<br>• **OLS Multivariado HC3 ($R^2 = 0.393$)** e **Logit Multivariado (ORs com IC 95%)** controlando simultaneamente por expectativa pitagórica, domínio territorial (`shot_share_prev`), continuidade do plantel (`returning_pts_share_prev`), antiguidade do treinador (`tenure_before`) e histórico de playoffs (`post_games_prev`).<br>• **Estratificação 3D do Paradoxo de Simpson** (`tenure_before` $\times$ `pyth_rel_prev` $\rightarrow$ `changed_during`). | `02_statistical_analysis.ipynb` (Secções 2, 3, 4.2, 5.3, 5.4)<br>Figuras `du08`, `du09`, `du10`, `du12`, `du13`, `du14` |
-| **3. DU: interpretation of results of statistical methods** | *Intermédio* | Todas as saídas estatísticas incluem **estatística de teste, $p$-value exato, tamanho do efeito ($r$, $\rho$, $\beta$, $\text{OR}$, $V$ de Cramér) e tradução para linguagem de hóquei (NHL)**:<br>• Ex.: Em vez de dizer apenas *"VIF alto"*, provamos algebricamente porque é que `pts_pct_rel` + `pyth_rel` + `luck` têm $\text{VIF} = \infty$ (dependência linear exata $\text{Luck} = \text{Pts\%} - \text{Pyth\%}$) e como o modelo desacoplado reduz todos os VIFs para $< 2.50$. | Caixas de interpretação Markdown a seguir a cada célula de código em `01_eda.ipynb` e `02_statistical_analysis.ipynb` |
-| **4. DU: knowledge extraction from results of statistical methods** | *Intermédio* | Extraímos **5 descobertas não-triviais com impacto direto nas decisões de preparação e modelação**:<br>1. **Armadilha de Leakage no `HOF`**: **98.86% (609/616)** das épocas de jogadores `HOF` na NHL (1982–2009) correspondem a induções ocorridas **depois** dessa época (`HOF.year >= Scoring.year`).<br>2. **Inflação estrutural do OTL em 1999**: A média da liga de `pts_pct` era matematicamente `0.500` até 1998, subindo para `0.542` (1999–2003) e `0.559` (2005–2009) ($p = 5.9 \times 10^{-8}$), tornando obrigatória a centragem por época (`_rel`).<br>3. **Regressão total da sorte (`luck_prev`) à média**: Na regressão desacoplada, `pyth_rel_prev` persiste fortemente ($\beta = +0.627, p < 10^{-80}$), enquanto `luck_prev` não tem efeito estatisticamente significativo ($\beta = +0.103, p = 0.245$).<br>4. **Domínio territorial (`shot_share_prev`) e continuidade (`returning_pts_share_prev`)**: Ambos acrescentam poder preditivo significativo para além da expectativa pitagórica ($z = 4.04, p < 0.0001$ e $z = 2.44, p = 0.015$).<br>5. **Paradoxo de Simpson na Tarefa (b)**: Treinadores novos contratados no verão (`new_coach = 1` / `tenure_before = 0`) são despedidos a meio da época **metade das vezes** dos treinadores que transitam (**10.5% vs 20.8%**, $\chi^2 = 8.37, p = 0.004$), mas em equipas abaixo da média o risco de despedimento explode do **Ano 0 (9.1%)** para o **Ano 1 (17.4%)**, **Ano 2 (35.7%)** e **Ano 3 (50.0%)**! | `01_eda.ipynb` (Secções 2.2, 3, 5)<br>`02_statistical_analysis.ipynb` (Secções 4 e 5)<br>`03_data_preparation.ipynb` (Secções 4.3.2 e 7) |
-| **5. DU: diversity of plots** | *Intermédio* | Criámos **18 figuras distintas a 300 dpi** (`du01`–`du14` + `dp01`–`dp04`) cobrindo **12 tipologias visuais diferentes**:<br>• Gantt de cobertura temporal (`du01`)<br>• Barras empilhadas de auditoria de *leakage* (`du02`)<br>• Violinos + Boxplots multi-era com anotações de testes (`du03`)<br>• Regressão em grelha categórica com bandas de IC (`du04`)<br>• Séries temporais duplas + taxas por época (`du05`)<br>• Scatter 4D com cor, tamanho, marcador e quadrantes (`du06`)<br>• Heatmap triangular de Spearman + painel de VIF (`du07`)<br>• Scree plot cumulativo + Heatmap de *loadings* de PCA (`du08`)<br>• Biplot 2D com elipses de confiança + perfis radiais/barras de clusters (`du09`)<br>• Mosaico de resíduos estandardizados $\chi^2$ (`du10`)<br>• Joint plot de regressão desacoplada + gráfico de coeficientes OLS HC3 (`du11`, `du12`)<br>• Curva de sobrevivência de Kaplan-Meier + Heatmap 2D do Paradoxo de Simpson + Forest Plot de Odds Ratios (`du13`, `du14`) | Pasta `docs/figures/du/` (`du01` a `du14` e `dp01` a `dp04`) |
-| **6. DU: complexity of plots** | *Intermédio-Alto* | Múltiplos gráficos codificam **3, 4 e 5 dimensões simultâneas** de forma limpa:<br>• `du06_4d_synthesis.png`: Eixo X = `pyth_pct` ($t$), Eixo Y = `pts_pct_next` ($t+1$), Cor = `shot_share` (domínio territorial), Tamanho = `returning_pts_share` (continuidade do plantel), Forma do marcador = `changed_during` (despedimento a meio da época).<br>• `du09_clustering_archetypes.png` & `du10_cluster_target_assoc.png`: Espaço PC1 $\times$ PC2 + pertença ao cluster + elipses $2\sigma$ + associação com playoffs e despedimentos em $t+1$.<br>• `du13_task_b_survival_simpson.png`: Curva de sobrevivência longitudinal + matriz 2D estratificada (`tenure_before` $\times$ tercil de `pts_pct_rel_prev` $\rightarrow$ taxa de `changed_during`). | `du06`, `du08`, `du09`, `du10`, `du12`, `du13`, `du14` |
-| **7. DU: presentation** | *Intermédio* | Todos os gráficos seguem um **design editorial uniforme**:<br>• **Títulos com conclusão (*takeaway titles*)** que resumem a descoberta principal no topo de cada figura.<br>• Subtítulos com $N$, janela temporal (`NHL 1982–2009, n = 690`) e estatísticas exatas ($p$-values, $\beta$, $\chi^2$).<br>• Paleta consistente e *colorblind-safe*, linhas de referência de média da liga e exportação automática a **300 dpi**. | Todos os 3 notebooks (`01`, `02`, `03`) e `docs/figures/du/*.png` |
-| **8. DU: interpretation of plots** | *Intermédio* | Cada gráfico é acompanhado de uma leitura estruturada dos eixos, quadrantes, bandas de confiança e exceções históricas (identificando franquias reais como `DET 1995–2001`, `EDM 1983–1987`, `OTT 1992–1994`, `SJS 1992–1993`, `CAR 1994`). | Secções *Visual Takeaway & Domain Interpretation* em `01_eda.ipynb`, `02_statistical_analysis.ipynb` e `03_data_preparation.ipynb` |
-| **9. DU: visual knowledge extraction** | *Intermédio* | Cada visualização responde a uma pergunta de engenharia de variáveis e **termina numa decisão concreta para o `03_data_preparation.ipynb`** (sumariada na Tabela de Síntese da Secção 6 do `02_statistical_analysis.ipynb`). | `02_statistical_analysis.ipynb` (Secção 6) & `03_data_preparation.ipynb` (Secções 4.3.2–8) |
+| Critério | O que fizemos | Onde está |
+|---|---|---|
+| **Diversity of statistical methods** | Shapiro-Wilk; Kruskal-Wallis $H$; Levene $W$; Mann-Whitney $U$ + rank-biserial; Pearson e Spearman; $\chi^2$ + Cramér's $V$; correlação point-biserial; VIF; PCA; K-Means vs GMM (Silhouette, Calinski-Harabasz, Davies-Bouldin); OLS com erros robustos HC3 + correlação parcial; sobrevivência estilo Kaplan-Meier por anos de tenure; Logit (odds ratios + IC 95%); índice de dispersão, GLM Poisson vs Negative Binomial (IRRs + IC 95%) | `01` secções 2–6, `02` secções 1–6 |
+| **Complexity of statistical methods** | Métodos 3+D: PCA com 12 variáveis de 5 tabelas (4 componentes, 60.0% da variância); clustering 4D no espaço PCA; OLS multivariado HC3 ($n = 660$, $R^2 = 0.393$); Logit multivariado ($n = 681$, LR $p = 0.0005$); NB multivariado para a task (c) ($n = 16{,}521$); estratificação de Simpson (tenure × tercil de pontos → `changed_during`) | `02` secções 2–6 |
+| **Interpretation of statistical results** | Cada output tem um bloco *Interpretation & Knowledge Extracted* com estatística de teste, $p$-value, tamanho do efeito ($\rho$, $\beta$, OR, IRR, $V$) e leitura em linguagem de hóquei | Blocos markdown a seguir a cada análise em `01` e `02` |
+| **Knowledge extraction (statistics)** | Ver as descobertas principais na secção 3 deste guia | `01` secção 7 e `02` secção 7 (tabelas de síntese) |
+| **Diversity of plots** | 18 figuras de DU (`du01`–`du18`) + 4 de DP (`dp01`–`dp04`): Gantt, séries temporais com eixo duplo, violinos, boxplots, regressões, barras agrupadas, scatter 4D, heatmaps, scree plot, biplots com elipses, coordenadas paralelas, curvas de sobrevivência, forest plots, dumbbell, hexbin, histogramas em escala log, frequências observadas vs esperadas | `docs/figures/du/` |
+| **Complexity of plots** | `du06`: $x$ = pts% relativo em $t-1$, $y$ = pts% relativo em $t$, tamanho = $\lvert$GD/G$_{t-1}\rvert$, cor/forma = `changed_during`. `du09`: PC1×PC2 e PC1×PC3 com clusters, elipses e vetores de loadings. `du10`: validação de clusters + coordenadas paralelas + taxas por perfil. `du13`: sobrevivência por qualidade da equipa + heatmap de Simpson | `du06`, `du09`, `du10`, `du13` |
+| **Presentation** | Títulos com a conclusão (*takeaway titles*), anotações com os testes, paleta consistente, exportação a 300 dpi | Todas as figuras |
+| **Interpretation of plots** | Os blocos de interpretação referem os painéis das figuras (ex.: "Panel A of `du13`") | `01` e `02` |
+| **Visual knowledge extraction** | Cada secção termina com uma decisão para Data Preparation / Modelling, reunida nas tabelas de síntese | `01` secção 7, `02` secção 7 |
 
----
+## 2. Critérios de Data Preparation
 
-## 2. Resumo da Arquitetura SQL Multi-Tabela (`sql/`)
-
-Para alimentar os 3 notebooks sem repetição de código e com **garantia matemática de zero *data leakage***, estruturámos a pasta `sql/` em **4 módulos de domínio + 1 integrador mestre**:
-
-1. **[sql/goalie_season.sql](file:///c:/Users/jpmar/OneDrive/Desktop/AC/sql/goalie_season.sql)** (`Goalies`): Agrega `save_pct`, `sa_pg` (remates sofridos por jogo), `starter_min_share` (quota de minutos do guarda-redes titular) e `shutouts_pg`.
-2. **[sql/team_splits.sql](file:///c:/Users/jpmar/OneDrive/Desktop/AC/sql/team_splits.sql)** (`TeamSplits`): Calcula `home_pts_pct`, `road_pts_pct`, `home_road_gap` e a trajetória intra-época `early_pts_pct` (Set–Jan, resolvendo os 26 nulos do lockout de 1994!) vs `late_pts_pct` (Fev–Abr) $\rightarrow$ `late_surge`.
-3. **[sql/roster_season.sql](file:///c:/Users/jpmar/OneDrive/Desktop/AC/sql/roster_season.sql)** (`Scoring` + `Master` + `AwardsPlayers`): Calcula idade e experiência ponderadas por jogos (`weighted_age`, `weighted_exp`), eficácia de remate (`shooting_pct`, `sog_pg`), concentração ofensiva (`top3_goal_share`, `n_20g_scorers`), prémios individuais e **continuidade do plantel (`returning_pts_share`)** usando apenas comparação entre plantéis $s$ e $s-1$.
-4. **[sql/playoff_and_sos.sql](file:///c:/Users/jpmar/OneDrive/Desktop/AC/sql/playoff_and_sos.sql)** (`Teams` + `TeamsPost`): Calcula `post_games` (jogos de playoff disputados) e a força dos rivais de divisão (`div_rivals_pts_pct_rel`).
-5. **[sql/team_multitable.sql](file:///c:/Users/jpmar/OneDrive/Desktop/AC/sql/team_multitable.sql)** (Integrador Mestre): Junta as 8 tabelas, centra por época (`_rel`) usando `AVG() OVER (PARTITION BY year)` e aplica `LAG() OVER (PARTITION BY franchID ORDER BY year)` (tratando o lockout de 2004 com `year - prev_year IN (1, 2)`), gerando **690 linhas exatas (`NHL 1982–2009`)** sem duplicados.
-
----
-
-## 3. Como o Data Understanding Melhorou o Data Preparation (`03_data_preparation.ipynb`)
-
-Nas secções `4.3.2` e `5` a `9` do [03_data_preparation.ipynb](file:///c:/Users/jpmar/OneDrive/Desktop/AC/notebooks/03_data_preparation.ipynb), fechámos o ciclo completo:
-
-1. **Secção 5 (Missing Values — [dp01_imputation_benchmark.png](file:///c:/Users/jpmar/OneDrive/Desktop/AC/docs/figures/du/dp01_imputation_benchmark.png))**:
-   - Provámos que **100% dos valores em falta são estruturais**: 86 treinadores *rookies* (`win_before_pct`), 9 equipas de expansão no 1.º ano (`_prev` e `new_coach`), 21 equipas de 1982 sem `Goalies.SA` em 1981 ($21+9=30$), e 18 linhas na tendência de 2 anos (`pts_pct_rel_trend`).
-   - Aplicámos a correção determinística `new_coach = 1` nas 9 equipas de expansão e criámos as *flags* `is_expansion_team` e `is_second_season`.
-   - Comparámos *Domain Prior*, *Median*, *KNNImputer* e *IterativeImputer (MICE)* ajustados **exclusivamente em $\text{year} < t$** (*walk-forward* 2000–2009).
-2. **Secção 6 (Outliers — [dp02_outliers_winsor.png](file:///c:/Users/jpmar/OneDrive/Desktop/AC/docs/figures/du/dp02_outliers_winsor.png))**:
-   - O **Isolation Forest** multivariado (ajustado em $\text{year} < 2000$) confirmou que os extremos são casos históricos reais: o Detroit de Scotty Bowman (`1995–2001`, $>2.000$ jogos de carreira e `+0.299` pts% acima da média) e as épocas inaugurais de Ottawa (`1993`) e San Jose (`1993`) (`-0.357` pts% relativo).
-   - Aplicámos **Winsorization nos percentis 1%–99% (ajustados no treino)** para modelos lineares/distância, sem eliminar nenhuma linha.
-3. **Secção 7 (Redundancy — [dp03_redundancy_pruning.png](file:///c:/Users/jpmar/OneDrive/Desktop/AC/docs/figures/du/dp03_redundancy_pruning.png))**:
-   - Eliminámos **23 variáveis redundantes** ($|\rho| \ge 0.80$ e identidades exatas como `former_player` vs `former_nhl_player` com $\text{VIF} = 45$, contagens de carreira vs `games_before`, e versões brutas vs `_rel`).
-   - Das **30 *features* finais podadas** (`8 coach + 22 team`), **29 têm $\text{VIF} < 2.85$** e todas têm $\text{VIF} < 8.50$.
-4. **Secção 8 (Transformations & Walk-Forward Verification — [dp04_pipeline_validation.png](file:///c:/Users/jpmar/OneDrive/Desktop/AC/docs/figures/du/dp04_pipeline_validation.png))**:
-   - Na validação *walk-forward* (2000–2009), o conjunto **Post-DU Multi-Table Pruned** bateu o **Baseline Pre-DU** em ambas as tarefas e em ambas as famílias de algoritmos:
-     - **Tarefa (a) (`target_pts_pct_rel`)**: RMSE desce de `0.0743` $\rightarrow$ **`0.0725`** ($R^2$: `0.319` $\rightarrow$ **`0.356`**) em Regressão Linear (`Ridge`), e de `0.0748` $\rightarrow$ **`0.0720`** ($R^2$: `0.316` $\rightarrow$ **`0.363`**) em `RandomForest`!
-     - **Tarefa (b) (`target_coach_changes_during`)**: PR-AUC sobe de `0.2805` $\rightarrow$ **`0.2981`** (`ROC-AUC: 0.6235` $\rightarrow$ **`0.6328`**) em `LogisticRegression`, e salta de `0.3247` $\rightarrow$ **`0.3526`** (**2.0x** a taxa base de `17.5%`) em `RandomForest`!
+| Critério | O que fizemos | Onde está |
+|---|---|---|
+| **Data integration** | Tabelas de treinadores (perfil, histórico, prémios, tenure) + `sql/team_multitable.sql`, que junta `Teams`, `Goalies`, `TeamSplits`, `Scoring`, `Master`, `AwardsPlayers`, `TeamsPost`, `Coaches`, `AwardsCoaches` e `TeamVsTeam` por `franchID` (para seguir as equipas que mudam de `tmID`), com lags `LAG() OVER (PARTITION BY franchID ORDER BY year)` e a ligação 2003 → 2005 por causa do lockout. Para a task (c), `sql/player_pim.sql` soma os stints dos jogadores trocados a meio da época | `03` secções 1 e 4.3.2; [`sql/`](../sql/) |
+| **Data quality dimensions** | Uniqueness, consistency, accuracy, validity, completeness e timeliness | `03` secção 2 |
+| **Redundancy** | Spearman $\lvert\rho\rvert \ge 0.80$ + VIF; 6 regras de domínio retiram 23 das 53 features (ficam 30). Depois da poda, 28 de 30 têm VIF < 3; o máximo é `pyth_rel_prev` (9.97), daí a regularização L2 nos modelos lineares | `03` secção 7, `dp03` |
+| **Missing data** | Taxonomia dos 4 mecanismos (todos estruturais); correções determinísticas (`new_coach = 1` nas equipas de expansão) e flags (`is_rookie_coach`, `is_expansion_team`, `is_second_season`); benchmark walk-forward 2000–2009 de 4 imputers (domain prior, mediana, KNN, MICE) ajustados só em anos < $t$. As diferenças estão na 3.ª–4.ª casa decimal | `03` secção 5, `dp01` |
+| **Outliers** | $z$-score univariado ($\lvert z\rvert > 3$) + Isolation Forest ajustado só em anos < 2000. Os casos extremos são reais (DET de Scotty Bowman 1995–2001, OTT 1993–1994, TBL 1998, EDM 1984), por isso não se apaga nenhuma linha; winsorization 1–99% ajustada no treino para os modelos lineares | `03` secção 6, `dp02` |
+| **Transformations** | Transformers sem leakage (`LeakFreeDomainImputer`, `TrainingWinsorizer`), `StandardScaler` para modelos lineares, árvores sem escala, discretização para modelos simbólicos; verificação walk-forward Pre-DU vs Post-DU | `03` secção 8, `dp04` |
 
 ---
 
-## 4. Três Perguntas Clássicas de Defesa (e Respostas Matadoras)
+## 3. Descobertas principais (com os números certos)
 
-1. ***"Porque é que cortaram o dataset em 1982–2009 (690 linhas) em vez de usar desde 1909 ou 1979?"***
-   - **Resposta**: Mostramos na Figura `du01_table_coverage.png` e no teste de Kruskal-Wallis/Levene (`du03_era_drift_tests.png`) que **1982 é a fronteira exata de integridade multi-tabela**: é o primeiro ano em que a NHL regista remates sofridos pelos guarda-redes (`Goalies.SA`, 100% de cobertura em 1982–2009 vs 0% antes de 1982). Sem `Goalies.SA`, seria impossível calcular `save_pct`, `shot_share` e `PDO`, que provámos na regressão OLS HC3 (`du12_task_a_multivariate_ols.png`) serem preditores altamente significativos ($z = 4.04, p < 0.0001$).
+1. **Leakage do Hall of Fame:** 98.86% (609 de 616) das épocas de jogadores do HOF na NHL em 1982–2009 aconteceram antes da indução. Usar `HOF` sem filtro é usar informação do futuro. (`01` secção 1.1)
+2. **Inflação dos pontos com o OTL:** a média da liga de pts% era exatamente 0.500 até 1998 e passou para 0.542 em 1999–2009 (Mann-Whitney $p = 5.9 \times 10^{-8}$). Por isso as features são centradas por época (`_rel`). (`01` secção 2, `du03`)
+3. **Mais paridade:** o desvio-padrão de pts% entre equipas caiu de 0.134 (1967–1981) para 0.092 (1999–2009) (Levene $p = 2.3 \times 10^{-9}$), e a correlação de uma época para a seguinte desceu de 0.773 (anos 70) para 0.588 (1982–2009). (`01` secções 2–3)
+4. **A sorte não persiste:** controlando a expectativa pitagórica ($\beta = +0.627$, $p < 10^{-80}$), a "sorte" de $t-1$ não tem efeito ($\beta = +0.103$, $p = 0.245$). (`02` secção 4, `du11`)
+5. **Shot share e continuidade do plantel** acrescentam informação além da expectativa pitagórica (OLS HC3: $z = 4.04$, $p < 0.0001$; $z = 2.44$, $p = 0.015$). (`02` secção 4, `du11`)
+6. **Lua-de-mel do treinador novo (task b):** treinadores contratados no verão são despedidos a meio da época em 10.5% dos casos, contra 20.8% dos que continuam ($\chi^2 = 8.37$, $p = 0.004$). (`01` secção 4, `du05`)
+7. **Paradoxo de Simpson (task b):** no total, os treinadores com 4+ anos parecem mais seguros (18.6%) do que os de 2–3 anos (26.5%). No tercil de equipas mais fracas, porém, o risco sobe de 10.5% (ano 0) para 20.0% (ano 1) e 41.8% (anos 2–3). (`02` secção 5, `du13`)
+8. **PIM e jogos disputados (task c):** nos totais, PIM e pontos correlacionam a +0.53, mas por jogo a −0.21 (jogadores com 20+ GP). Os jogos disputados explicam 66% da variância de $\log(1+\text{PIM})$. (`02` secção 6, `du17`)
+9. **A task (c) é uma contagem sobredispersa:** variância/média = 55. A Poisson falha ($\chi^2/\text{df} = 24$) e a Negative Binomial ajusta muito melhor (AIC 438,699 → 157,378). (`01` secção 6 e `02` secção 6, `du15`, `du17`)
 
-2. ***"Porque é que não usaram a tabela `HOF` (Hall of Fame) para medir a qualidade das estrelas do plantel?"***
-   - **Resposta**: Fizemos uma auditoria temporal cruzando `Scoring.year` com `HOF.year` (`du02_hof_leakage_audit.png`) e descobrimos que **98.86% (609 em 616)** das épocas de jogadores do Hall of Fame entre 1982 e 2009 correspondem a jogadores que **só foram induzidos no futuro** (muitas vezes 10 a 20 anos depois). Usar `HOF` introduziria *data leakage* severo do futuro. Em vez disso, medimos o talento do plantel de forma 100% *leak-free* em $t-1$ através de `n_20g_scorers_prev`, `top3_goal_share_prev` e `returning_pts_share_prev`.
+## 4. O que o Data Understanding acrescentou ao Data Preparation
 
-3. ***"Qual foi a descoberta mais surpreendente sobre a mudança de treinador a meio da época (Tarefa b)?"***
-   - **Resposta**: Encontámos um **Paradoxo de Simpson clássico** (`du13_task_b_survival_simpson.png`): à primeira vista, um treinador acabado de contratar no verão (`new_coach = 1`, `tenure_before = 0`) parece muito mais seguro (só **10.5%** são despedidos a meio da época, contra **20.8%** dos treinadores que continuam, $p = 0.004$), apesar de herdar equipas piores. Isto acontece porque a direção dá um *"período de lua-de-mel"* no Ano 0 (9.1% de despedimentos mesmo em equipas abaixo da média). Mas quando estratificamos por `tenure_before` $\times$ desempenho anterior (`pyth_rel_prev`), o risco de despedimento em equipas abaixo da média dispara para **17.4% no Ano 1**, **35.7% no Ano 2** e **50.0% no Ano 3**! Traduzimos esta descoberta diretamente na variável `hot_seat_interaction`, que subiu o PR-AUC *walk-forward* da Tarefa (b) para **0.3526** (o dobro da taxa base).
+Validação walk-forward 2000–2009 em `03` secção 8 (`dp04`), Pre-DU vs Post-DU:
+
+| Pipeline | Task (a) RMSE | Task (a) $R^2$ | Task (b) ROC-AUC | Task (b) PR-AUC |
+|---|---|---|---|---|
+| Linear, Pre-DU → Post-DU | 0.0738 → **0.0724** | 0.326 → **0.357** | 0.6181 → **0.6329** | 0.2711 → **0.2759** |
+| Random Forest, Pre-DU → Post-DU | 0.0744 → **0.0721** | 0.321 → **0.362** | 0.6521 → 0.6454 | 0.3175 → **0.3522** |
+
+A task (a) melhora nas duas famílias. Na task (b) o PR-AUC melhora nas duas, mas o ROC-AUC do Random Forest desce ligeiramente.
+
+**Limitação a admitir se perguntarem:** as features Post-DU foram escolhidas depois de explorar 1982–2009 inteiro, o que inclui os anos de teste 2000–2009. O ganho é por isso ligeiramente otimista e deve ser confirmado numa época final de hold-out na fase de Modelling.
+
+---
+
+## 5. Perguntas prováveis na defesa
+
+1. ***"Porque é que cortaram o dataset em 1982–2009 (690 linhas)?"***
+   - A partir de 1982 a tabela `Goalies` regista os remates sofridos (`SA`) em todas as equipas (`du01`). Sem `SA` não há `save_pct` nem `shot_share`, e o `shot_share` é um dos preditores mais fortes da task (a) (OLS HC3: $z = 4.04$, $p < 0.0001$, `du11`). Os anos anteriores continuam a ser usados para calcular os históricos (lags e carreiras).
+
+2. ***"Porque é que não usaram a tabela `HOF` para medir a qualidade dos jogadores?"***
+   - Porque 98.86% das épocas de jogadores do HOF aconteceram antes da indução (`01` secção 1.1). Saber hoje que um jogador vai entrar no HOF é informação do futuro. Medimos o talento com dados de $t-1$: `n_20g_scorers_prev`, `top3_goal_share_prev` e `returning_pts_share_prev`.
+
+3. ***"Qual foi a descoberta mais surpreendente na task (b)?"***
+   - O paradoxo de Simpson na antiguidade do treinador (`du13`). No total, os treinadores veteranos parecem mais seguros. Mas, mantendo a qualidade da equipa fixa, o risco de despedimento numa equipa fraca sobe de 10.5% no ano 0 para 41.8% nos anos 2–3. Traduzimos isto na feature `hot_seat_interaction` = min(tenure, 3) × (−`pyth_rel_prev`).
+
+4. ***"Porque é que a task (c) não é uma regressão normal?"***
+   - O target é uma contagem com variância 55 vezes maior do que a média, muitos zeros e uma cauda longa de "enforcers". A Poisson não serve ($\chi^2/\text{df} = 24$) e a Negative Binomial ajusta muito melhor (`du17`). Além disso, o total depende dos jogos disputados, que não se sabem antes da época. Por isso propomos prever a taxa por jogo × jogos esperados.
+
+5. ***"Isso é mesmo um Kaplan-Meier?"***
+   - É uma estimativa do mesmo tipo (produto das probabilidades de sobreviver a cada ano de tenure), mas calculada a partir de todas as épocas juntas, e não seguindo cada treinador individualmente. Serve para mostrar como o risco evolui com a antiguidade, não para testes formais de sobrevivência.
