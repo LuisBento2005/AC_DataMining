@@ -3,7 +3,7 @@
 Este documento liga cada critério de DU e DP da grelha de avaliação aos métodos, figuras e resultados que estão nos notebooks:
 - [`notebooks/01_eda.ipynb`](../notebooks/01_eda.ipynb): exploração, eras da NHL, leakage, primeira análise das 3 tasks
 - [`notebooks/02_statistical_analysis.ipynb`](../notebooks/02_statistical_analysis.ipynb): análise multivariada e multi-tabela, aprofundamento das 3 tasks
-- [`notebooks/03_data_preparation.ipynb`](../notebooks/03_data_preparation.ipynb): integração, qualidade, missing values, outliers, redundância e transformações (tasks a e b; a task c está no fim de cada secção: 1.6, 2.8, 3.6, 4.5, 5.4, 6.3, 7.3, 8.1 e 9)
+- [`notebooks/03_data_preparation.ipynb`](../notebooks/03_data_preparation.ipynb): integração, qualidade, missing values, outliers, redundância e transformações (tasks a e b; a task c está no fim de cada secção: 1.6, 2.8, 3.6, 4.5, 5.4, 6.3, 7.3, 8.1 e 9.1)
 
 Todas as figuras estão em [`docs/figures/du/`](figures/du/). **Todos os números deste guia foram copiados dos outputs dos notebooks.** Se um notebook for alterado e re-executado, este guia tem de ser revisto.
 
@@ -33,7 +33,7 @@ Todas as figuras estão em [`docs/figures/du/`](figures/du/). **Todos os número
 | **Missing data** | Taxonomia dos 4 mecanismos (todos estruturais); correções determinísticas (`new_coach = 1` nas equipas de expansão) e flags (`is_rookie_coach`, `is_expansion_team`, `is_second_season`); benchmark walk-forward 2000–2009 de 4 imputers (domain prior, mediana, KNN, MICE) ajustados só em anos < $t$. As diferenças estão na 3.ª–4.ª casa decimal | `03` secção 5, `dp01` |
 | **Outliers** | $z$-score univariado ($\lvert z\rvert > 3$) + Isolation Forest ajustado só em anos < 2000. Os casos extremos são reais (DET de Scotty Bowman 1995–2001, OTT 1993–1994, TBL 1998, EDM 1984), por isso não se apaga nenhuma linha; winsorization 1–99% ajustada no treino para os modelos lineares | `03` secção 6, `dp02` |
 | **Transformations** | Transformers sem leakage (`LeakFreeDomainImputer`, `TrainingWinsorizer`), `StandardScaler` para modelos lineares, árvores sem escala, discretização para modelos simbólicos; verificação walk-forward Pre-DU vs Post-DU | `03` secção 8, `dp04` |
-| **Task (c): dataset jogador-época** | Os mesmos passos para o PIM: integração (`sql/player_pim.sql`, stints somados, `Master`), qualidade (PIM da equipa ≥ soma dos jogadores em 688 de 690; 37 jogadores com mais jogos do que a época são todos trocados), só jogadores de campo, taxa de PIM "encolhida" para a média da liga (K = 10 jogos) e relativa à liga, flags `is_rookie` / `is_returning` (19.6% sem época anterior), enforcers mantidos, 20 → 12 features por redundância, features em log e target de contagem. Verificação walk-forward: MAE 19.2 contra 21.0 do "igual ao ano passado", melhor nas 9 épocas | `03` secções 1.6, 2.8, 3.6, 4.5, 5.4, 6.3, 7.3, 8.1 e 9; `dp05` |
+| **Task (c): dataset jogador-época** | Os mesmos passos para o PIM: integração (`sql/player_pim.sql`, stints somados, `Master`), qualidade (PIM da equipa ≥ soma dos jogadores em 688 de 690; 37 jogadores com mais jogos do que a época são todos trocados), só jogadores de campo, taxa de PIM "encolhida" para a média da liga (K = 10 jogos) e relativa à liga, flags `is_rookie` / `is_returning` (19.6% sem época anterior), enforcers mantidos, 20 → 12 features por redundância, features em log e target de contagem. Verificação walk-forward: MAE 19.2 contra 21.0 do "igual ao ano passado", melhor nas 9 épocas | `03` secções 1.6, 2.8, 3.6, 4.5, 5.4, 6.3, 7.3, 8.1 e 9.1; `dp05` |
 
 ---
 
