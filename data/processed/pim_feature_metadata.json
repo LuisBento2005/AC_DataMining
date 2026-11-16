@@ -1,8 +1,19 @@
 {
   "n_rows": 20539,
-  "unit": "skater-season (goalies excluded)",
+  "unit": "NHL skater-season (goalies excluded)",
   "year_range": [
     1982,
+    2009
+  ],
+  "eval_years": [
+    2000,
+    2001,
+    2002,
+    2003,
+    2005,
+    2006,
+    2007,
+    2008,
     2009
   ],
   "identifiers": [
@@ -46,7 +57,18 @@
     "is_rookie",
     "is_returning"
   ],
-  "features": [
+  "dropped_by_pairs": [
+    "pim_pg_prev",
+    "pim_pg_prev_idx",
+    "pim_prev",
+    "career_pim_before",
+    "career_pim_pg_idx",
+    "pim_pg_prev2",
+    "seasons_before",
+    "pts_pg_prev",
+    "played_prev"
+  ],
+  "kept_features": [
     "age",
     "height",
     "weight",
@@ -57,40 +79,27 @@
     "career_pim_pg_before",
     "career_pts_pg_before",
     "league_pim_pg_prev",
+    "team_pim_pg_rel_prev",
     "is_rookie",
     "is_returning"
   ],
   "log_columns": [
-    "log_gp_prev",
     "log_pim_pg_prev_shrunk",
-    "log_career_gp_before",
-    "log_career_pim_pg_before"
-  ],
-  "model_features": [
-    "age",
-    "height",
-    "weight",
-    "is_defense",
-    "log_gp_prev",
-    "log_pim_pg_prev_shrunk",
-    "log_career_gp_before",
     "log_career_pim_pg_before",
-    "career_pts_pg_before",
-    "league_pim_pg_prev",
-    "is_rookie",
-    "is_returning"
+    "log_career_pts_pg_before",
+    "log_career_gp_before",
+    "log_gp_prev"
   ],
-  "dropped_redundant": [
-    "played_prev",
-    "pim_pg_prev",
-    "pim_pg_prev_idx",
-    "pim_prev",
-    "career_pim_before",
-    "career_pim_pg_idx",
-    "pim_pg_prev2",
-    "seasons_before",
-    "pts_pg_prev",
-    "team_pim_pg_rel_prev"
+  "log_replaces": {
+    "log_pim_pg_prev_shrunk": "pim_pg_prev_shrunk",
+    "log_career_pim_pg_before": "career_pim_pg_before",
+    "log_career_pts_pg_before": "career_pts_pg_before",
+    "log_career_gp_before": "career_gp_before",
+    "log_gp_prev": "gp_prev"
+  },
+  "winsorize_percentiles": [
+    1,
+    99
   ],
   "shrinkage_K": 10
 }
